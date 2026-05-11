@@ -195,9 +195,112 @@ VALUES
 (105, 'All Points inc.'),
 (106, 'Sao Paulo Manufacturing');
 
+-- -- Test INSERT INTO have all worked
 SELECT * FROM Item;
 SELECT * FROM Employee;
 SELECT * FROM Department;
 SELECT * FROM Sale;
 SELECT * FROM Supplier;
 SELECT * FROM Delivery;
+
+-- Q1 What are the names of employees in the Marketing Department?
+SELECT EmployeeName FROM Employee
+WHERE DepartmentName = 'Marketing';
+
+-- Q2 Find the items sold by the departments on the second floor
+SELECT DISTINCT ItemName
+FROM Sale, Department
+WHERE Sale.DepartmentName = Department.DepartmentName
+AND Department.DepartmentFloor = 2;
+
+SELECT DISTINCT ItemName
+FROM (Sale NATURAL JOIN Department)
+WHERE Department.DepartmentFloor = 2;
+
+SELECT DISTINCT ItemName
+FROM (Sale JOIN Department)
+WHERE Department.DepartmentFloor = 2;
+
+-- Q3 Identify by floor the items available on floors other than the second floor
+SELECT DISTINCT ItemName,
+Department.DepartmentFloor AS 'On Floor'
+FROM Delivery, Department
+WHERE Delivery.DepartmentName = Department.DepartmentName AND
+Department.DepartmentFloor <> 2
+ORDER BY Department.DepartmentFloor, ItemName;
+
+-- Q4 Find the average salary of the employees in the Clothes department
+SELECT AVG(EmployeeSalary) FROM Employee
+WHERE DepartmentName = 'Clothes';
+
+-- Q5 Find, for each department, the average salary of the employees in that department and report by descending salary
+SELECT DepartmentName, AVG(EmployeeSalary) AS 'Average Salary'
+FROM Employee
+GROUP BY DepartmentName
+ORDER BY 'Average Salary' DESC;
+
+-- Q6 List the items delivered by exactly one supplier (i.e. the items always delivered by the same supplier)
+SELECT ItemName FROM Delivery
+GROUP BY ItemName HAVING COUNT(DISTINCT SupplierNumber) = 1;
+
+-- Q7 List the suppliers that deliver at least 10 items
+SELECT Supplier.SupplierNumber, Supplier.SupplierName FROM Delivery, Supplier
+WHERE Delivery.SupplierNumber = Supplier.SupplierNumber 
+GROUP BY  Supplier.SupplierNumber, Supplier.SupplierName 
+HAVING COUNT(DISTINCT Delivery.ItemName)>= 10;
+
+-- Q8 Count the number of direct employees of each manager
+SELECT Boss.EmployeeNumber, Boss.EmployeeName, COUNT(*) AS 'Employees'
+FROM Employee AS Worker, Employee AS Boss WHERE Worker.BossNumber = Boss.EmployeeNumber
+GROUP BY Boss.EmployeeNumber, Boss.EmployeeName;
+
+-- Q9 Find, for each department that sells items of type 'E' the average salary of the employees
+SELECT Department.DepartmentName, AVG(EmployeeSalary) 
+AS 'Average Salary'
+FROM Employee, Department, Sale, Item WHERE Employee.DepartmentName = Department.DepartmentName AND Department.DepartmentName = Sale.DepartmentName AND Sale.ItemName = Item.ItemName
+AND ItemType = 'E'
+GROUP BY Department.DepartmentName;
+
+-- Q10 Find the total number of items of type 'E' sold by departments on the second floor
+SELECT SUM(SaleQuantity) AS 'Number of Items' FROM Department, Sale, Item
+WHERE Department.DepartmentName = Sale.DepartmentName 
+AND Sale.ItemName = Item.ItemName AND ItemType = 'E' 
+AND DepartmentFloor = '2';
+
+-- Using NATURAL JOIN
+SELECT SUM(SaleQuantity) AS 'Number of Items'
+FROM Department
+NATURAL JOIN Sale
+NATURAL JOIN Item
+WHERE ItemType = 'E'
+  AND DepartmentFloor = 2;
+
+-- Q11 What is the average delivery quantity of items of tupe 'N' delivered by each company
+SELECT Delivery.SupplierNumber, SupplierName, Delivery.ItemName, 
+AVG(Delivery.DeliveryQuantity) AS 'Average Quantity'
+FROM ((Delivery NATURAL JOIN Supplier) NATURAL JOIN Item) 
+WHERE Item.ItemType = 'N'
+GROUP BY Delivery.SupplierNumber, SupplierName, Delivery.ItemName 
+ORDER BY Delivery.SupplierNumber, SupplierName, 'Average Quantity' DESC, Delivery.ItemName;
+
+-- EQUI JOIN equivalent
+SELECT 
+    Delivery.SupplierNumber,
+    Supplier.SupplierName,
+    Delivery.ItemName,
+    AVG(Delivery.DeliveryQuantity) AS 'Average Quantity'
+FROM Delivery
+JOIN Supplier 
+    ON Delivery.SupplierNumber = Supplier.SupplierNumber
+JOIN Item
+    ON Delivery.ItemName = Item.ItemName
+WHERE Item.ItemType = 'N'
+GROUP BY 
+    Delivery.SupplierNumber,
+    Supplier.SupplierName,
+    Delivery.ItemName
+ORDER BY 
+    Delivery.SupplierNumber,
+    Supplier.SupplierName,
+    AVG(Delivery.DeliveryQuantity) DESC,
+    Delivery.ItemName;
