@@ -304,3 +304,58 @@ ORDER BY
     Supplier.SupplierName,
     AVG(Delivery.DeliveryQuantity) DESC,
     Delivery.ItemName;
+
+-- NESTED QUERIES
+
+-- Q1 What are the names of items sold by departments on the second floor? 
+SELECT DISTINCT ItemName
+FROM Sale
+WHERE DepartmentName IN (SELECT DepartmentName
+FROM Department
+WHERE DepartmentFloor = 2);
+
+-- Q2 Find the salary of Clare's manager.
+SELECT EmployeeName, EmployeeSalary FROM Employee
+WHERE EmployeeNumber = (SELECT BossNumber FROM Employee
+WHERE EmployeeName = 'Clare');
+
+-- Q3 Find the name and salary of the managers with more than two employees
+SELECT EmployeeName, EmployeeSalary FROM Employee
+WHERE EmployeeNumber IN (SELECT BossNumber FROM Employee
+GROUP BY BossNumber HAVING COUNT(*) > 2);
+
+-- Q4 List the names of the employees who earn more than any employee in the Marketing department.
+SELECT EmployeeName, EmployeeSalary FROM Employee
+WHERE EmployeeSalary >
+(SELECT MAX(EmployeeSalary) FROM Employee
+WHERE DepartmentName = 'Marketing');
+
+-- Q5 Among all the departments with a total salary greater than £25000, find the departments that sell Stetsons.
+SELECT DISTINCT DepartmentName FROM Sale
+WHERE ItemName = 'Stetson' AND DepartmentName IN (SELECT DepartmentName
+FROM Employee
+GROUP BY DepartmentName HAVING SUM(EmployeeSalary) > 25000);
+-- There have been no Stetson sales so using the 'Sale' table doesn't work.
+
+-- Q6 Find the suppliers 
+SELECT DISTINCT Delivery.SupplierNumber, Supplier.SupplierName FROM (Supplier NATURAL JOIN Delivery)
+WHERE (ItemName <> 'Compass' AND SupplierNumber IN (SELECT SupplierNumber
+FROM Delivery
+WHERE ItemName = 'Compass'));
+
+-- Q7 Find the suppliers that deliver compasses and at least three other kinds of items.
+SELECT DISTINCT Delivery.SupplierNumber, Supplier.SupplierName 
+FROM (Supplier NATURAL JOIN Delivery) 
+WHERE SupplierNumber IN
+(SELECT SupplierNumber FROM Delivery
+WHERE ItemName = 'Compass') 
+GROUP BY Delivery.SupplierNumber, Supplier.SupplierName
+HAVING COUNT(DISTINCT ItemName) > 3;
+
+-- Q8 List the departments for which each item delivered to the department is delivered to some other department as well.
+SELECT DISTINCT DepartmentName FROM Delivery AS Delivery1 WHERE NOT EXISTS
+(SELECT *FROM Delivery AS Delivery2 
+WHERE Delivery2.DepartmentName = Delivery1.DepartmentName
+AND ItemName NOT IN (SELECT ItemName
+FROM Delivery AS Delivery3
+WHERE Delivery3.DepartmentName <> Delivery1.DepartmentName));
